@@ -189,6 +189,7 @@ class Service(object):
         self.svc_initctl = None
         self.enable_cmd = None
         self.arguments = module.params.get('arguments', '')
+        self.options = module.params['options']
         self.rcconf_file = None
         self.rcconf_key = None
         self.rcconf_value = None
@@ -991,6 +992,9 @@ class FreeBsdService(Service):
     platform = 'FreeBSD'
     distribution = None
 
+    def __init__(self, module):
+        super(FreeBsdService, self).__init__(module)
+
     def get_service_tools(self):
         self.svc_cmd = self.module.get_bin_path('service', True)
         if not self.svc_cmd:
@@ -999,7 +1003,7 @@ class FreeBsdService(Service):
         self.sysrc_cmd = self.module.get_bin_path('sysrc')
 
     def get_service_status(self):
-        rc, stdout, stderr = self.execute_command("%s %s %s %s" % (self.svc_cmd, self.name, 'onestatus', self.arguments))
+        rc, stdout, stderr = self.execute_command("%s %s %s %s %s" % (self.svc_cmd, self.options, self.name, 'onestatus', self.arguments))
         if self.name == "pf":
             self.running = "Enabled" in stdout
         else:
@@ -1019,7 +1023,7 @@ class FreeBsdService(Service):
             if os.path.isfile(rcfile):
                 self.rcconf_file = rcfile
 
-        rc, stdout, stderr = self.execute_command("%s %s %s %s" % (self.svc_cmd, self.name, 'rcvar', self.arguments))
+        rc, stdout, stderr = self.execute_command("%s %s %s %s %s" % (self.svc_cmd, self.options, self.name, 'rcvar', self.arguments))
         try:
             rcvars = shlex.split(stdout, comments=True)
         except Exception:
@@ -1084,7 +1088,7 @@ class FreeBsdService(Service):
         if self.action == "reload":
             self.action = "onereload"
 
-        ret = self.execute_command("%s %s %s %s" % (self.svc_cmd, self.name, self.action, self.arguments))
+        ret = self.execute_command("%s %s %s %s %s" % (self.svc_cmd, self.options, self.name, self.action, self.arguments))
 
         if self.sleep:
             time.sleep(self.sleep)
@@ -1586,6 +1590,7 @@ def main():
             enabled=dict(type='bool'),
             runlevel=dict(type='str', default='default'),
             arguments=dict(type='str', default='', aliases=['args']),
+            options=dict(type='str', default='', aliases=['opts']),
         ),
         supports_check_mode=True,
         required_one_of=[['state', 'enabled']],
